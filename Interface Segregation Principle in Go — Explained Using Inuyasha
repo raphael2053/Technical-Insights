@@ -1,0 +1,13 @@
+# The Why
+
+In Golang, only when a client implements all the methods defined in an interface is it considered to implement that interface. 
+
+As a result, when you have various clients, you will find that they have to implements all the methods of an interface, even if they don’t really need those methods.
+
+# The What
+
+clients of an interface implements only the methods they need
+
+# The How
+
+# Code Time!
