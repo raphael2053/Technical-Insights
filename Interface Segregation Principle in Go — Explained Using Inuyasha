@@ -1,13 +1,235 @@
 # The Why
 
-In Golang, only when a client implements all the methods defined in an interface is it considered to implement that interface. 
+In Golang, an object must implement all the methods defined in an interface to be considered as implementing that interface. As a result, when you have various objects, they must implement all the methods of an interface, even if they don’t really need those methods, leading to empty implementations like this:
 
-As a result, when you have various clients, you will find that they have to implements all the methods of an interface, even if they don’t really need those methods.
+```go
+func (c *Charizard) MethodNotNeededByObject(){
+    fmt.Println("I don't need this method at all!")
+}
+```
+
+The Interface Segregation Principle (ISP) helps prevent objects from being forced to implement methods they don’t need.
 
 # The What
 
-clients of an interface implements only the methods they need
+ISP means that you spilit a big interface into smaller, more specific ones so that the objects only need to implement the methods they actually use.
 
 # The How
 
+To introduce ISP, let's use Pokémon as an example.
+
+Imagine we are designing a new Pokémon game and creating a `Pokemon` interface that will be implemented by all pokemons in the game, such as Ho-Oh and Charizard.
+
+![Interface Segregation Principle.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/edce0330-5c0e-4ef2-b5e5-dd09a17dd78f/71fa8199-b04f-4b7a-a931-b088edd362df/Interface_Segregation_Principle.png)
+
+As you can see, both of them must implement the methods `CommonAttack`, `Fly` and `SignatureMove`.
+
+However, if you’ve watched the anime, you know that while Ho-Oh can implement the three methods, Charizard cannot use `SignatureMove` because it’s not a Legendary Pokémon.
+
+Thus, Charizard ends up with an implementation of a method that it doesn’t need:
+
+```go
+func (c *Charizard) SignatureMove(){
+    fmt.Println("I don't need this method at all!")
+}
+```
+
+To avoid this, we use ISP. We create a `LegendaryPokemon` interface that includes the `SignatureMove` method, which only Ho-Oh will implement. This way, Charizard only implements the methods it needs.
+
+![Interface Segregation Principle (1).png](https://prod-files-secure.s3.us-west-2.amazonaws.com/edce0330-5c0e-4ef2-b5e5-dd09a17dd78f/c7a1d3c4-6784-419c-9987-0afd7cf5f331/Interface_Segregation_Principle_(1).png)
+
+Now, Charizard only implements the methods it needs. Congratulations, Charizard!
+
+At the end, there will be at least one interface implemented by all pokemons, which will be used as the type to refer to our pokemons.
+
 # Code Time!
+
+First, let’s see how it looks without ISP.
+
+Define the `Pokemon` interface:
+
+```go
+package main
+
+import "fmt"
+
+type Pokemon interface {
+	CommonAttack()
+	Fly()
+	SignatureMove()
+}
+
+type Pokemons []Pokemon
+
+func ExecuteWithoutISP(pokemons Pokemons) {
+	for _, pokemon := range pokemons {
+		pokemon.CommonAttack()
+		pokemon.Fly()
+		pokemon.SignatureMove()
+	}
+}
+```
+
+Add the structs that implement the `Pokemon` interface:
+
+```go
+type HoOh struct{}
+
+func NewHoOh() *HoOh {
+	return &HoOh{}
+}
+
+func (h *HoOh) CommonAttack() {
+	fmt.Println("HoOh uses CommonAttack")
+}
+func (h *HoOh) Fly() {
+	fmt.Println("HoOh uses Fly")
+}
+func (h *HoOh) SignatureMove() {
+	fmt.Println("HoOh uses SignatureMove")
+}
+```
+
+```go
+type Charizard struct{}
+
+func NewCharizard() *Charizard {
+	return &Charizard{}
+}
+
+func (c *Charizard) CommonAttack() {
+	fmt.Println("Charizard uses CommonAttack")
+}
+func (c *Charizard) Fly() {
+	fmt.Println("Charizard uses Fly")
+}
+func (c *Charizard) SignatureMove() {
+	// Empty implementation
+}
+```
+
+Perform the abilities of each pokemon:
+
+```go
+func main() {
+	pokemons := Pokemons{}
+	pokemons = append(pokemons, NewHoOh())
+	pokemons = append(pokemons, NewCharizard())
+	ExecuteWithoutISP(pokemons)
+}
+
+```
+
+When we run the code, we get the output: 
+
+```go
+HoOh uses CommonAttack
+HoOh uses Fly
+HoOh uses SignatureMove
+Charizard uses CommonAttack
+Charizard uses Fly
+```
+
+Everything goes well, Ho-Oh uses `CommonAttack`, `Fly` and `SignatureMove`, and Charizard uses `CommonAttack` and `Fly`. However the code is not ideal because Charizard is implementing a method it doesn’t need:
+
+```go
+func (c *Charizard) SignatureMove() {
+	// Empty implementation
+}
+```
+
+Let’s solve this by applying ISP:
+
+Define the `LegendaryPokemon` interface, which will be implemented by Ho-Oh:
+
+```go
+package main
+
+import "fmt"
+
+type Pokemon interface {
+	CommonAttack()
+	Fly()
+}
+
+type LegendaryPokemon interface {
+	SignatureMove()
+}
+
+type Pokemons []Pokemon
+
+func ExecuteWithISP(pokemons Pokemons) {
+	for _, pokemon := range pokemons {
+		pokemon.CommonAttack()
+		pokemon.Fly()
+
+		// Check if the pokemon is a LegendaryPokemon
+		if legendaryPokemon, ok := pokemon.(LegendaryPokemon); ok {
+			legendaryPokemon.SignatureMove()
+		}
+	}
+}
+```
+
+HoOh still implements the three methods:
+
+```go
+type HoOh struct{}
+
+func NewHoOh() *HoOh {
+	return &HoOh{}
+}
+
+func (h *HoOh) CommonAttack() {
+	fmt.Println("HoOh uses CommonAttack")
+}
+func (h *HoOh) Fly() {
+	fmt.Println("HoOh uses Fly")
+}
+func (h *HoOh) SignatureMove() {
+	fmt.Println("HoOh uses SignatureMove")
+}
+```
+
+But Charizard no longer needs to implement `SignatureMove` method.
+
+```go
+type Charizard struct{}
+
+func NewCharizard() *Charizard {
+	return &Charizard{}
+}
+
+func (c *Charizard) CommonAttack() {
+	fmt.Println("Charizard uses CommonAttack")
+}
+func (c *Charizard) Fly() {
+	fmt.Println("Charizard uses Fly")
+}
+```
+
+The main function remains the same:
+
+```go
+func main() {
+	pokemons := Pokemons{}
+	pokemons = append(pokemons, NewHoOh())
+	pokemons = append(pokemons, NewCharizard())
+	ExecuteWithISP(pokemons)
+}
+
+```
+
+Finally, we run the code and get the same output, but with a much better underlying code.
+
+```
+HoOh uses CommonAttack
+HoOh uses Fly
+HoOh uses SignatureMove
+Charizard uses CommonAttack
+Charizard uses Fly
+```
+
+# Conclusion
+
+Interface Segregation Principle is a good practice to split a large interface into smaller ones. As a result, objects only need to implement the specific small interfaces, avoiding the burden of implementing the entire large interface. This improves the flexibility and maintainability of the the code.
