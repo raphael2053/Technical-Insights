@@ -1,35 +1,42 @@
-# Why is Service Registration and Discovery needed?
+# The Why
+Assume that your services are running in various data centers and listening on different ports. When your client sends a request to the server, how can it know which server can handle this request? This is where the Service Registration and Discovery mechanism comes into play.
 
-Assume that your services are running in various data centers and listening different ports. Your client is sending a request to a server. How could it know which server could handle this request ?
+# The What
+Service Registration and Discovery is a crucial component of microservice architecture. It ensures that client-side requests are directed to the appropriate server.
 
-similarily, Imagine that you want to order a pizza, however you remain unaware with which restrount could provide pizzas. 
+# The How
+To introduce the basic model of Service Registration and Discovery, let’s use Pokémon as an example.
 
-You will search the nearest pizza provider on Google Map, then you get the phone number.
+Imagine you are a Pokémon trainer in the Pokémon world. After a tough fight, your Pokémon are in critical condition, and you need to find a Pokémon Center to heal them as soon as possible. You search for the nearest Pokémon Center using your Pokédex (a device owned by every Pokémon trainer). The Pokédex shows you the exact location of the nearest center. Finally, you arrive at the Pokémon Center and save your Pokémon’s lives. Congratulations!
 
-Finally, you call the pizza provider and make an order.
+In this example:
 
-In this case, you are a client, the pizza provider is a server and Google acts as the so-called Registration Center which knows how you could contact a pizza provider.
+- You, the Pokémon trainer, represent the client.
+- the Pokémon Center represents the service.
+- The Pokédex acts as the Registry which knows the location of Pokémon Centers.
 
-Now it’s time to get to the basic model of service registration and discovery.
+Now, let’s delve into the basic model of Service Registration and Discovery:
 
-# Basic Model
+How services go online:
 
-### Service go online:
+1. When the server-side application starts, it needs to register its information in the registry, primarily its location information.
+2. Once registration is successful, the registry and the server maintain a heartbeat to ensure the service is still available.
+3. Before the client makes the first call to a service, it must obtain a list of all available service nodes from the registry. The client then caches this list locally.
+4. The client and the registry maintain a heartbeat and synchronize data. If there are any changes to the service, the registry notifies the client, which updates its local list of available nodes.
+5. The client sends requests to the service.
+6. The service returns responses to the client.
 
-1. When the server-side application starts, it need to register its own information in the registry, primarily location information.
-2. Once the registration is successful, the registry and the server must maintain a heartbeat.
-3. Before the client makes the first call to a service, it must first obtain a list of all available service nodes from the registry, and then the client will cache the list of available nodes for each service locally.
-4. The client and the registry need to maintain a heartbeat and synchronize data. If there are any changes on the service, the registry will notify the client, and the client will update the local list of available nodes.
-5. The client sends requests.
-6. The service returns responses.
+![picture here]
 
-### Service go offline:
+How services go offline:
 
-1. The service notify the registry that it is going to go offline.
-2. The registry notify the client that the service has gone offline.
+1. The service notifies the registry that it is going offline.
+2. The registry notifies the client that the service has gone offline.
 3. Once the client receives the notification, it will no longer send requests to that service.
 4. The service goes offline after waiting for a period of time.
 
-It is worth noting that the service has to wait for a period of time before it can go offline. This is because there is a delay from when it notifies the registry of its intention to go offline to when the client receives the notification. This delay is the minimum time the server must wait.
+![picture here]
 
-You can perceive the model as a triangle, with the three vertices being the client, the registry, and the service. The three sides of the triangle are client-registry, registry-service, and client-service, respectively. The high availability solution we discuss later essentially involve carefully considering what to do if any vertex or any side of of the triangle encounters a problem.
+It is worth noting that the service must wait for a period of time before it can go offline. This delay ensures that there is enough time for the registry to notify the client and for the client to stop sending requests to the service.
+
+You can visualize the model as a triangle, with the three vertices representing the client, the registry, and the service. The sides of the triangle represent the connections between the client and the registry, the registry and the service, and the client and the service. High availability solutions involve carefully considering what to do if any vertex or any side of the triangle encounters a problem.
