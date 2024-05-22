@@ -1,0 +1,126 @@
+# The Why
+
+You might installed your Centos just now and figured out that it couldn’t access to the Internet. You might try to ping google and it outputs the annoying `ping error: network is unreachable`. You have to complete some configurations to solve the problem.
+
+# The How
+
+1.Verify the Wireless Device
+
+First, check if your wireless device is recongized by the system:
+
+```bash
+$ nmcli device status
+```
+
+If you see an output with your wireless device(e.g. wla5s0), it is recogized.
+
+If it indicates the wifi device is `unmanaged`, make it `managed`:
+
+```bash
+$ nmcli dev set wla5s0 managed yes     # Replace wla5s0 with your Wi-FI device name
+```
+
+Check whether the wifi device is blocked:
+
+```bash
+$ rfkill list
+```
+
+If the WI-FI is blocked, unblock it:
+
+```bash
+$ rfkill unblock wifi
+```
+
+2.Check NetworkManager Status
+
+Ensure NetworkManager is running:
+
+```bash
+$ sudo systemctl status NetworkManager
+```
+
+If it’s not running, start abd enable it:
+
+```bash
+$ sudo systemctl start NetworkManager
+$ sudo systemctl enable NetworkManager
+```
+
+3.Check dependency packages
+
+It’s necessary to provide the Wi-Fi device driver for the system:
+
+You can download the driver from the device providers’ official website, say intel: https://www.intel.com/content/www/us/en/support/articles/000005511/wireless.html
+
+Download the right driver file according to your Wi-Fi device, move it into `/lib/firmware/` and uncompress it:
+
+```bash
+$ mv iwlwifi-*.tgz /lib/firmware/
+$ tar -xvf iwlwifi*.tgz
+```
+
+It’s necessary to install the `NetworkManager-wifi` packge for the system to enable WIFI feature. Check whether the package has been installed on your system:
+
+```bash
+$ rpm -qa | grep -i networkmanager
+```
+
+![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/edce0330-5c0e-4ef2-b5e5-dd09a17dd78f/69eec76a-2a07-4639-b00b-4198ed9e60d3/Untitled.png)
+
+If the package not exists, you can download it from this link: http://rpmfind.net/linux/rpm2html/search.php
+
+Search for `NetworkManager-wifi` and pick one suitable for your system architecture, say x86_64:
+
+![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/edce0330-5c0e-4ef2-b5e5-dd09a17dd78f/3d8e60e8-0396-4816-aa26-2fcaf3f47cf4/Untitled.png)
+
+Install the package:
+
+```bash
+$ dnf install NetworkManager-wifi-*.rpm --disablerepo='*'
+```
+
+You might find that there are other packages lacking as well(such as iw, wpa_sup and wireless-regdb), no worries, install them in the same way.
+
+4.Restart NetworkManager
+
+```bash
+$ systemctl restart NetworkManager
+```
+
+Or you can reboot:
+
+```bash
+$ reboot now
+```
+
+Now your Wi-Fi feature should have been enabled.
+
+5.Connect to the Wi-Fi
+
+Let’s connect to your Wi-Fi
+
+First, let’s obtain the list accessible Wi-Fi’s:
+
+```bash
+$ nmcli dev wifi rescan
+$ nmcli dev wifi list
+```
+
+![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/edce0330-5c0e-4ef2-b5e5-dd09a17dd78f/debd2d05-be8d-4968-9f8d-fd71d347b146/Untitled.png)
+
+Then, Let’s get to connect it:
+
+```bash
+$ nmcli dev wifi con "your_SSID" password "your_password"   # Basically, SSID is your Wi-Fi's name.
+```
+
+Finally, let’s determine whether it can access the Internet now:
+
+```bash
+$ ping 8.8.8.8
+```
+
+![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/edce0330-5c0e-4ef2-b5e5-dd09a17dd78f/294b29c4-7ea1-4158-bd29-09a3770859df/Untitled.png)
+
+It works! Congratulations!
