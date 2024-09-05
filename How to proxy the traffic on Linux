@@ -1,8 +1,10 @@
 # The Why
 
+It’s hard for users in certain areas to access some specific networking services, such as Github, repository sources, Docker Hub and so on.
+
 # The What
 
-We can use Trojan to proxy the traffic download commands, such as yum and wget. Trojan is a secure socks5 proxy and you can configure it to handle all your traffic by using a tool like proxychains.
+You can use Trojan-GFW and Proxychains to handle all your traffic, including yum, wget and Docker command
 
 # The How
 
@@ -12,31 +14,38 @@ Make sure you have the correct subscription link provided by your service provid
 
 ## 2. Install Trojan-GFW and configure it
 
-First , install Trojan-GFW on your system. You can download it from **[Link]**
+First , install Trojan-GFW on your system. Trojan-GFW is an unidentifiable mechanism that helps you bypass GFW.
 
-Download Subscription Configurations
+You can download it from https://github.com/trojan-gfw/trojan/releases/tag/v1.16.0
+
+## 3. Download Subscription Configurations
 
 Trojan-GFW does not natively support subscription links directly within its configuration file, but you can use third-party tools to parse the subscription link and generate the configuration files.
 
-You can use tools like [clash](https://github.com/Dreamacro/clash) (cross-platform) to parse the subscription link.
+You can use tools like [clash](https://github.com/Dreamacro/clash) (cross-platform) to parse the subscription link and get a config file which includes content as same as the following:
 
-Configure Trojan-GFW Manually
+```
+{name: IEP 1, server: shda.fc-sigawa.xyz, port: 10178, type: trojan, password: xxxxxx, sni: m.test.com, skip-cert-verify: true, udp: true}
+
+```
+
+## 4. Configure Trojan-GFW Manually
 
 Once you have the node configurations, you can manually configure config.json for Trojan-GFW.
 
 ```json
 {
   "run_type": "client",
-  "local_addr": "127.0.0.1",
+  "local_addr": "0.0.0.0",
   "local_port": 1080,
   "remote_addr": "your-remote-server-address",
-  "remote_port": 443,
+  "remote_port": "your-remote-server-port",
   "password": [
     "your-password"
   ],
   "ssl": {
-    "verify": true,
-    "verify_hostname": true,
+    "verify": false,              // It's recommended to close the SSL verification.
+    "verify_hostname": false
     "cert": "",
     "cipher": "TLS_AES_128_GCM_SHA256",
     "sni": "your-sni",
@@ -47,13 +56,43 @@ Once you have the node configurations, you can manually configure config.json fo
 }
 ```
 
-Run trojan-gfw
+It’s worth noting that, if you want to run Trojan within a Docker container, the field `local_addr` should be 0.0.0.0 rather than 127.0.0.1, because Docker’s `-p` option maps a port on the host to a port inside the container, and  if the service inside the container is only listening on 127.0.0.1, Docker’s port mapping can’t redirect external traffic (from the host) to that service. This is because the traffic is coming from an external source and trying to reach the loopback interface, which doesn’t naturally accept connections from outside the container. By switching the bind address to 0.0.0.0, Trojan accepted connections from any interface, including the one Docker uses to forward the host traffic into the container.
+
+## 5. Run Trojan-GFW
+
+You can run Trojan-GFW on the host directly:
 
 ```bash
 ./trojan -c /path/to/your/config.json
 ```
 
-## Send requests through the proxy
+Or run it within a Docker container:
+
+```
+FROM harbor.ops.qianxin-inc.cn/library/centos:7.9.2009.v5-10
+
+WORKDIR /usr/bin
+
+COPY ./trojan /usr/bin/trojan
+COPY ./config.json /usr/bin/config.json
+
+RUN chmod 777 /usr/bin/trojan
+RUN chmod 777 /usr/bin/config.json
+
+ENV TZ=Asia/Shanghai
+
+ENTRYPOINT ["/usr/bin/trojan"]
+
+CMD ["-c", "/usr/bin/config.json"]
+```
+
+```
+docker build -t my-trojan-gfw .
+
+docker run --name trojan-container -v /home/guanliming/trojan/config.json:/app/config.json -p 1080:1080 -d my-trojan-gfw
+```
+
+## 6. Testing
 
 You can use curl with the --socks5 option to specify the proxy. By default, Trojan listens on 127.0.0.1:1080 for SOCKS5 proxy connections.
 
@@ -95,6 +134,33 @@ socks5 127.0.0.1 1080
 sudo proxychains4 yum install <package_name>
 
 sudo proxychains4 wget <URL>
+```
+
+If you want to proxy docker command such as docker pull
+
+```
+# 新建systemctl下的配置文件夹
+mkdir -p /etc/systemd/system/docker.service.d
+
+# 添加配置文件
+vim /etc/systemd/system/docker.service.d/http-proxy.conf
+
+# 添加如下内容并保存
+[Service]
+Environment="HTTP_PROXY=socks5://localhost:1080"         # localhost也可以替换具体提供代理服务的ip
+Environment="HTTPS_PROXY=socks5://localhost:1080"
+Environment="NO_PROXY=localhost,127.0.0.1,docker-registry.example.com,.corp"
+
+systemctl daemon-reload
+systemctl restart docker
+
+$ docker info | grep Proxy
+ HTTP Proxy: http://proxy.example.com:80
+ HTTPS Proxy: https://proxy.example.com:443
+ No Proxy: localhost,127.0.0.1,docker-registry.example.com,.corp
+ 
+# 下载docker镜像
+proxychains4 docker pull xxx
 ```
 
 # Summary
