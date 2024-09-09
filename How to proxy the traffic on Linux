@@ -136,30 +136,31 @@ sudo proxychains4 yum install <package_name>
 sudo proxychains4 wget <URL>
 ```
 
-If you want to proxy docker command such as docker pull
+Besides, if you want to proxy docker command such as docker pull: 
 
 ```
-# 新建systemctl下的配置文件夹
-mkdir -p /etc/systemd/system/docker.service.d
+# Create systemctl configuration directory.
+$ mkdir -p /etc/systemd/system/docker.service.d
 
-# 添加配置文件
-vim /etc/systemd/system/docker.service.d/http-proxy.conf
+# Create configuration.
+$ vim /etc/systemd/system/docker.service.d/http-proxy.conf
 
-# 添加如下内容并保存
+# Add and save the following content.
 [Service]
 Environment="HTTP_PROXY=socks5://localhost:1080"         # localhost也可以替换具体提供代理服务的ip
 Environment="HTTPS_PROXY=socks5://localhost:1080"
 Environment="NO_PROXY=localhost,127.0.0.1,docker-registry.example.com,.corp"
 
-systemctl daemon-reload
-systemctl restart docker
+# Restart docker.
+$ systemctl daemon-reload
+$ systemctl restart docker
 
 $ docker info | grep Proxy
- HTTP Proxy: http://proxy.example.com:80
- HTTPS Proxy: https://proxy.example.com:443
- No Proxy: localhost,127.0.0.1,docker-registry.example.com,.corp
+HTTP Proxy: http://proxy.example.com:80
+HTTPS Proxy: https://proxy.example.com:443
+No Proxy: localhost,127.0.0.1,docker-registry.example.com,.corp
  
-# 下载docker镜像
+# Download any docker image you want.
 proxychains4 docker pull xxx
 ```
 
